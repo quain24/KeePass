@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30717.126
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KeePass", "KeePass\KeePass.csproj", "{508C395B-4A75-479A-9244-F9CC56E1E453}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeePass.Tests", "KeePass.Tests\KeePass.Tests.csproj", "{4147DE28-5F81-404B-A830-6806B17F2435}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{508C395B-4A75-479A-9244-F9CC56E1E453}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{508C395B-4A75-479A-9244-F9CC56E1E453}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{508C395B-4A75-479A-9244-F9CC56E1E453}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{508C395B-4A75-479A-9244-F9CC56E1E453}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4147DE28-5F81-404B-A830-6806B17F2435}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4147DE28-5F81-404B-A830-6806B17F2435}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4147DE28-5F81-404B-A830-6806B17F2435}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4147DE28-5F81-404B-A830-6806B17F2435}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8EC72E32-17AE-4D52-9F85-83F18AFC2401}
+	EndGlobalSection
+EndGlobal
