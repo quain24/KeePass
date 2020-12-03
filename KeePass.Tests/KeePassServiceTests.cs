@@ -1,9 +1,5 @@
 ﻿using KeePass.Tests.Fixtures;
-using Microsoft.Extensions.Logging;
-using Moq;
-using Moq.Contrib.ExpressionBuilders.Logging;
 using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Xunit;
@@ -24,8 +20,9 @@ namespace KeePass.Tests
         [Fact]
         public async Task Given_proper_guid_will_return_proper_secret()
         {
+            using var logger = Output.BuildLoggerFor<IKeePassService>();
             Service = new KeePassService(HttpClientFixture.GetValidResponseClient(),
-                KeePassSettingsFixtures.GetProperKeePassSettings(), null);
+                KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
             var askGuid = "abcdef";
 
             var response = await Service.AskForSecret(askGuid);
@@ -36,42 +33,43 @@ namespace KeePass.Tests
         }
 
         [Fact]
-        public async Task Given_empty_guid_will_throw()
+        public async Task Given_empty_guid_will_throw_ArgumentOutOfRangeException()
         {
+            using var logger = Output.BuildLoggerFor<IKeePassService>();
+
             Service = new KeePassService(HttpClientFixture.GetValidResponseClient(),
-                KeePassSettingsFixtures.GetProperKeePassSettings(), null);
+                KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
             var askGuid = string.Empty;
 
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Service.AskForSecret(askGuid));
         }
 
         [Fact]
-        public async Task Given_null_guid_will_throw()
+        public async Task Given_null_guid_will_throw_ArgumentOutOfRangeException()
         {
+            using var logger = Output.BuildLoggerFor<IKeePassService>();
+
             Service = new KeePassService(HttpClientFixture.GetValidResponseClient(),
-                KeePassSettingsFixtures.GetProperKeePassSettings(), null);
+                KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
             string askGuid = null;
 
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Service.AskForSecret(askGuid));
         }
 
         [Fact]
-        public async Task Will_throw_httpException_when_bad_credentials_for_token_were_sent()
+        public async Task Will_throw_HttpRequestException_when_bad_credentials_for_token_were_sent()
         {
-            var loggerMock = new Mock<ILogger<IKeePassService>>();
+            using var logger = Output.BuildLoggerFor<IKeePassService>();
 
             Service = new KeePassService(HttpClientFixture.GetOnlyInvalidTokenClient(),
-                KeePassSettingsFixtures.GetProperKeePassSettings(), loggerMock.Object);
+                KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
             var askGuid = "not_important";
 
             await Assert.ThrowsAsync<HttpRequestException>(() => Service.AskForSecret(askGuid));
-
-            loggerMock.Verify(Log.With.LogLevel(LogLevel.Information), Times.Exactly(3));
-            loggerMock.Verify(Log.With.LogLevel(LogLevel.Error), Times.Exactly(3));
         }
 
         [Fact]
-        public async Task Will_throw_httpException_when_token_is_expired_after_retrying()
+        public async Task Will_throw_HttpRequestException_when_token_is_expired_after_retrying()
         {
             using var logger = Output.BuildLoggerFor<IKeePassService>();
 
@@ -83,11 +81,23 @@ namespace KeePass.Tests
         }
 
         [Fact]
-        public async Task Will_throw_httpException_when_searched_guid_is_not_found()
+        public async Task Will_throw_HttpRequestException_when_searched_guid_is_not_found()
         {
             using var logger = Output.BuildLoggerFor<IKeePassService>();
 
             Service = new KeePassService(HttpClientFixture.GetGuidNotFoundClient(),
+                KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
+            var askGuid = "not_important";
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => Service.AskForSecret(askGuid));
+        }
+
+        [Fact]
+        public async Task Will_throw_HttpRequestException_when_trying_to_get_secret_with_invalid_token_for_password_part()
+        {
+            using var logger = Output.BuildLoggerFor<IKeePassService>();
+
+            Service = new KeePassService(HttpClientFixture.GetValidTokenButUnauthorizedResponseClient(),
                 KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
             var askGuid = "not_important";
 

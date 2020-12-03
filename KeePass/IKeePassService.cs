@@ -1,8 +1,8 @@
-﻿using System;
+﻿using KeePass.Models;
+using System;
 using System.Net.Http;
 using System.Security.Authentication;
 using System.Threading.Tasks;
-using KeePass.Models;
 
 namespace KeePass
 {

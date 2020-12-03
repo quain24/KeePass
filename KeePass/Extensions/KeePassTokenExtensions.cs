@@ -1,5 +1,5 @@
-﻿using System;
-using KeePass.Models;
+﻿using KeePass.Models;
+using System;
 
 namespace KeePass.Extensions
 {
@@ -12,7 +12,10 @@ namespace KeePass.Extensions
         /// <returns>If <see cref="Token"/> is valid</returns>
         internal static bool IsCorrect(this Token token)
         {
-            return token is not null && token.Error is null && token.AccessToken is not null;
+            return token is not null &&
+                   token.Error is null &&
+                   string.IsNullOrWhiteSpace(token.AccessToken) is false &&
+                   token.ExpirationTime > 0;
         }
 
         /// <summary>

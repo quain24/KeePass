@@ -58,6 +58,8 @@ namespace KeePass
 
                 _logger?.LogInformation("{0}: Asking for secret of {1}", Name, guid);
 
+                await GetToken().ConfigureAwait(false);
+
                 var dataTask = AskForDataResponse(guid);
                 var passwordTask = AskForPasswordResponse(guid);
 
@@ -67,6 +69,7 @@ namespace KeePass
                 dataResponse.EnsureSuccessStatusCode();
                 passwordResponse.EnsureSuccessStatusCode();
 
+                _logger?.LogInformation("{0}: Secret received.", Name);
                 return await CreateSecret(dataResponse, passwordResponse).ConfigureAwait(false);
             }
             catch (HttpRequestException ex)
@@ -81,25 +84,24 @@ namespace KeePass
         {
             return await _retryIfUnauthorizedAsyncPolicy.ExecuteAsync(async _ =>
             {
-                var token = await GetToken().ConfigureAwait(false);
-
+                _logger?.LogDebug("{0}: Trying for data", Name);
                 var requestForData = new HttpRequestMessage(HttpMethod.Get, _setting.RestEndpoint + guid);
-                AddRequiredHeadersTo(requestForData, token);
+                AddRequiredHeadersTo(requestForData, _token);
 
                 return await _client.SendAsync(requestForData).ConfigureAwait(false);
-            }, ContextForSecretsRequest()).ConfigureAwait(false);
+            }, ContextForSecretsRequest("Data")).ConfigureAwait(false);
         }
 
         private async Task<HttpResponseMessage> AskForPasswordResponse(string guid)
         {
             return await _retryIfUnauthorizedAsyncPolicy.ExecuteAsync(async _ =>
             {
-                var token = await GetToken().ConfigureAwait(false);
+                _logger?.LogDebug("{0}: Trying for password", Name);
                 var requestForPassword = new HttpRequestMessage(HttpMethod.Get, _setting.RestEndpoint + guid + "/password");
-                AddRequiredHeadersTo(requestForPassword, token);
+                AddRequiredHeadersTo(requestForPassword, _token);
 
                 return await _client.SendAsync(requestForPassword).ConfigureAwait(false);
-            }, ContextForSecretsRequest()).ConfigureAwait(false);
+            }, ContextForSecretsRequest("Password")).ConfigureAwait(false);
         }
 
         private async Task<Secret> CreateSecret(HttpResponseMessage dataResponse, HttpResponseMessage passwordResponse)
@@ -121,7 +123,7 @@ namespace KeePass
             }
         }
 
-        private string GetPasswordFrom(string passwordMessage)
+        private static string GetPasswordFrom(string passwordMessage)
         {
             if (string.IsNullOrEmpty(passwordMessage))
                 return string.Empty;
@@ -149,36 +151,18 @@ namespace KeePass
 
         private async Task<Token> RenewToken()
         {
-            try
-            {
-                _logger?.LogInformation("{0}: Asking remote service for token...", Name);
+            _logger?.LogInformation("{0}: Asking remote service for token...", Name);
 
-                var response = await _client
-                    .SendAsync(RequestForToken())
-                    .ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
+            var response = await _client
+                .SendAsync(RequestForToken())
+                .ConfigureAwait(false);
 
-                var freshToken = JsonSerializer.Deserialize<Token>(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
-                if (freshToken.IsCorrect())
-                {
-                    _logger?.LogInformation("{0}: Token received.", Name);
-                    return _token = freshToken;
-                }
+            var freshToken = await DeserializeToken(response).ConfigureAwait(false);
 
-                _logger?.LogError("{0}: Token service response was proper, but received token is not correct according to internal validation.", Name);
-                throw new AuthenticationException();
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger?.LogError("{0}: Error - could not create security token - API service returned incorrect response: code - {1}",
-                    Name, ex.StatusCode);
-                throw;
-            }
-            catch (Exception ex) when (ex is JsonException || ex is NotSupportedException)
-            {
-                _logger?.LogError(ex, "{0}: Unable to deserialize Token from API response", Name);
-                throw;
-            }
+            EnsureCorrectnessOf(response, freshToken);
+
+            _logger?.LogInformation("{0}: Token received.", Name);
+            return _token = freshToken;
         }
 
         private HttpRequestMessage RequestForToken()
@@ -198,16 +182,48 @@ namespace KeePass
             return request;
         }
 
-        private void AddRequiredHeadersTo(HttpRequestMessage request, Token token)
+        private async Task<Token> DeserializeToken(HttpResponseMessage response)
+        {
+            Token freshToken = null;
+            try
+            {
+                freshToken = JsonSerializer.Deserialize<Token>(await response?.Content?.ReadAsStringAsync() ?? string.Empty);
+            }
+            catch (Exception ex) when (ex is JsonException || ex is NotSupportedException)
+            {
+                _logger?.LogError(ex, "{0}: Unable to deserialize Token from API response - possibly response format changed?", Name);
+            }
+
+            return freshToken;
+        }
+
+        private void EnsureCorrectnessOf(HttpResponseMessage response, Token freshToken)
+        {
+            try
+            {
+                response.EnsureSuccessStatusCode();
+                if (!freshToken.IsCorrect() || freshToken.IsExpired())
+                    throw new HttpRequestException();
+            }
+            catch (HttpRequestException)
+            {
+                _logger?.LogError("{0}: Error - could not create security token - API response: Error: {1}, Description: {2}",
+                    Name, freshToken?.Error ?? "not provided", freshToken?.ErrorDescription ?? "not provided");
+                throw;
+            }
+        }
+
+        private static void AddRequiredHeadersTo(HttpRequestMessage request, Token token)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue(token.Type, token);
             request.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
         }
 
-        private Context ContextForSecretsRequest()
+        private Context ContextForSecretsRequest(string nameOfRequestedPart)
         {
             var context = new Context().WithLogger(_logger);
             context.TryAdd("RenewToken", new Func<Task<Token>>(async () => await RenewToken().ConfigureAwait(false)));
+            context.TryAdd("Requesting", nameOfRequestedPart);
             return context;
         }
     }

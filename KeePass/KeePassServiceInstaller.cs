@@ -1,7 +1,7 @@
-﻿using System;
-using System.Net.Http.Headers;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Net.Http.Headers;
 
 namespace KeePass
 {

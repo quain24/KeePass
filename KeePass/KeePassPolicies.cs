@@ -1,12 +1,12 @@
-﻿using System;
-using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
-using KeePass.Extensions;
+﻿using KeePass.Extensions;
 using KeePass.Models;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Extensions.Http;
+using System;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace KeePass
 {
@@ -46,10 +46,13 @@ namespace KeePass
                 .WaitAndRetryAsync(1, _ => TimeSpan.FromSeconds(3),
                     async (response, _, retryNumber, context) =>
                     {
-                        context.GetLogger()?.LogInformation("{0}: Service reports that access token is invalid / expired - trying to get new one...", serviceName);
+                        context.TryGetValue("Requesting", out var nameOfRequestedPart);
 
-                        if (context["RenewToken"] is Func<Task<Token>> renewToken)
-                            await renewToken();
+                        context.GetLogger()?.LogInformation("{0}: Service reports with \"{1}\" ({2}) code when asked about {3} part - access token is invalid / expired - trying to get new one...",
+                            serviceName, response.Result.StatusCode, (int)response.Result.StatusCode, nameOfRequestedPart?.ToString());
+
+                        if (context.TryGetValue("RenewToken", out var renewDelegate) && renewDelegate is Func<Task<Token>> renewToken)
+                            await renewToken().ConfigureAwait(false);
                     });
         }
     }

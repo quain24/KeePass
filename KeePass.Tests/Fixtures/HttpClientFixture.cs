@@ -152,5 +152,53 @@ namespace KeePass.Tests.Fixtures
                 BaseAddress = new Uri(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress)
             };
         }
+
+        public static HttpClient GetValidTokenButUnauthorizedResponseClient()
+        {
+            var mockMessageHandler = new Mock<HttpMessageHandler>();
+
+            mockMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync((HttpRequestMessage request, CancellationToken token) =>
+                {
+                    var data = KeePassSettingsFixtures.GetProperKeePassSettings();
+                    var guid = string.Empty;
+
+                    if ((request.RequestUri?.AbsoluteUri.StartsWith(data.BaseAddress + data.RestEndpoint) ?? false) &&
+                        (!request.RequestUri?.AbsoluteUri.EndsWith("password", StringComparison.InvariantCultureIgnoreCase) ?? false))
+                    {
+                        guid = request.RequestUri.AbsoluteUri.Replace(data.BaseAddress + data.RestEndpoint, "");
+                        var response = new HttpResponseMessage(HttpStatusCode.OK);
+                        response.RequestMessage = request;
+                        response.Content = new StringContent(ServiceResponseFixture.ValidDataResponse(guid));
+                        return response;
+                    }
+                    if ((request.RequestUri?.AbsoluteUri.StartsWith(data.BaseAddress + data.RestEndpoint) ?? false) &&
+                             (request.RequestUri?.AbsoluteUri.EndsWith("password", StringComparison.InvariantCultureIgnoreCase) ?? false))
+                    {
+                        var response = new HttpResponseMessage(HttpStatusCode.Unauthorized);
+                        response.RequestMessage = request;
+                        response.Content = new StringContent(ServiceResponseFixture.ValidPasswordResponse());
+                        return response;
+                    }
+
+                    if (request.RequestUri.AbsoluteUri.StartsWith(data.BaseAddress + data.TokenEndpoint))
+                    {
+                        var response = new HttpResponseMessage(HttpStatusCode.OK);
+                        response.RequestMessage = request;
+                        response.Content =
+                            new StringContent(JsonSerializer.Serialize(KeePassTokenFixtures.GetProperToken()));
+                        return response;
+                    }
+
+                    throw new InvalidOperationException("Error when generating response in http client from fixture.");
+                });
+
+            return new HttpClient(mockMessageHandler.Object)
+            {
+                BaseAddress = new Uri(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress)
+            };
+        }
     }
 }

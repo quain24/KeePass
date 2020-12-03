@@ -36,7 +36,7 @@ namespace KeePass.Tests.Fixtures
                 AccessToken = "proper_token_in_string",
                 Error = null,
                 ErrorDescription = null,
-                ExpirationTime = 1200,
+                ExpirationTime = 1,
                 Type = "bearer",
                 CreatedAt = DateTime.Now - TimeSpan.FromSeconds(1201)
             };
