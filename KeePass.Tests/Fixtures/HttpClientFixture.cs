@@ -1,204 +1,139 @@
-﻿using Moq;
-using Moq.Protected;
-using System;
+﻿using JustEat.HttpClientInterception;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace KeePass.Tests.Fixtures
 {
     public static class HttpClientFixture
     {
-        public static HttpClient GetValidResponseClient()
+        private static string ProperRequestContentForToken()
         {
-            var mockMessageHandler = new Mock<HttpMessageHandler>();
-
-            mockMessageHandler.Protected()
-                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync((HttpRequestMessage request, CancellationToken token) =>
-                {
-                    var data = KeePassSettingsFixtures.GetProperKeePassSettings();
-                    var guid = string.Empty;
-
-                    // Ugly, but beats regex solution
-                    if ((request.RequestUri?.AbsoluteUri.StartsWith(data.BaseAddress + data.RestEndpoint) ?? false) &&
-                        (!request.RequestUri?.AbsoluteUri.EndsWith("password", StringComparison.InvariantCultureIgnoreCase) ?? false))
-                    {
-                        guid = request.RequestUri.AbsoluteUri.Replace(data.BaseAddress + data.RestEndpoint, "");
-                        var response = new HttpResponseMessage(HttpStatusCode.OK);
-                        response.RequestMessage = request;
-                        response.Content = new StringContent(ServiceResponseFixture.ValidDataResponse(guid));
-                        return response;
-                    }
-                    if ((request.RequestUri?.AbsoluteUri.StartsWith(data.BaseAddress + data.RestEndpoint) ?? false) &&
-                             (request.RequestUri?.AbsoluteUri.EndsWith("password", StringComparison.InvariantCultureIgnoreCase) ?? false))
-                    {
-                        var response = new HttpResponseMessage(HttpStatusCode.OK);
-                        response.RequestMessage = request;
-                        response.Content = new StringContent(ServiceResponseFixture.ValidPasswordResponse());
-                        return response;
-                    }
-
-                    if (request.RequestUri.AbsoluteUri.StartsWith(data.BaseAddress + data.TokenEndpoint))
-                    {
-                        var response = new HttpResponseMessage(HttpStatusCode.OK);
-                        response.RequestMessage = request;
-                        response.Content =
-                            new StringContent(JsonSerializer.Serialize(KeePassTokenFixtures.GetProperToken()));
-                        return response;
-                    }
-
-                    throw new InvalidOperationException("Error when generating response in http client from fixture.");
-                });
-
-            return new HttpClient(mockMessageHandler.Object)
+            var content = new Dictionary<string, string>
             {
-                BaseAddress = new Uri(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress)
+                {"grant_type", "password"},
+                {"username", KeePassSettingsFixtures.GetProperKeePassSettings().Username},
+                {"password", KeePassSettingsFixtures.GetProperKeePassSettings().Password}
             };
+
+            return new FormUrlEncodedContent(content).ReadAsStringAsync().GetAwaiter().GetResult();
         }
 
-        public static HttpClient GetOnlyInvalidTokenClient()
+        public static void HandleTokenNormally(HttpClientInterceptorOptions options)
         {
-            var mockMessageHandler = new Mock<HttpMessageHandler>();
-
-            mockMessageHandler.Protected()
-                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync((HttpRequestMessage request, CancellationToken token) =>
+            new HttpRequestInterceptionBuilder()
+                .Requests().ForHttps().ForPost().ForAnyHost()
+                .ForPath(KeePassSettingsFixtures.GetProperKeePassSettings().TokenEndpoint)
+                .ForContent(ctx =>
+               {
+                   var context = ctx.ReadAsStringAsync().GetAwaiter().GetResult();
+                   return context == ProperRequestContentForToken();
+               })
+                .Responds()
+                .WithStatus(HttpStatusCode.OK)
+                .WithSystemTextJsonContent(new
                 {
-                    var data = KeePassSettingsFixtures.GetProperKeePassSettings();
+                    access_token = KeePassTokenFixtures.GetProperToken().AccessToken,
+                    token_type = KeePassTokenFixtures.GetProperToken().Type,
+                    expires_in = KeePassTokenFixtures.GetProperToken().ExpirationTime,
+                    error = KeePassTokenFixtures.GetProperToken().Error,
+                    error_description = KeePassTokenFixtures.GetProperToken().ErrorDescription
+                })
+                .RegisterWith(options);
 
-                    if (request.RequestUri.AbsoluteUri.StartsWith(data.BaseAddress + data.TokenEndpoint))
-                    {
-                        var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
-                        response.RequestMessage = request;
-                        response.Content =
-                            new StringContent(JsonSerializer.Serialize(KeePassTokenFixtures.GetInvalidTokenCausedByWrongCredentials()));
-                        return response;
-                    }
-
-                    throw new InvalidOperationException("Error when generating response in http client from fixture.");
-                });
-
-            return new HttpClient(mockMessageHandler.Object)
-            {
-                BaseAddress = new Uri(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress)
-            };
+            new HttpRequestInterceptionBuilder()
+                .Requests().ForHttps().ForPost().ForAnyHost()
+                .ForPath(KeePassSettingsFixtures.GetProperKeePassSettings().TokenEndpoint)
+                .ForContent(ctx =>
+                {
+                    var context = ctx.ReadAsStringAsync().GetAwaiter().GetResult();
+                    return !context.Contains($"password={KeePassSettingsFixtures.GetProperKeePassSettings().Password}") ||
+                           !context.Contains($"username={KeePassSettingsFixtures.GetProperKeePassSettings().Username}");
+                })
+                .Responds()
+                .WithStatus(HttpStatusCode.Unauthorized)
+                .WithSystemTextJsonContent(new
+                {
+                    access_token = KeePassTokenFixtures.GetInvalidTokenCausedByWrongCredentials().AccessToken,
+                    token_type = KeePassTokenFixtures.GetInvalidTokenCausedByWrongCredentials().Type,
+                    expires_in = KeePassTokenFixtures.GetInvalidTokenCausedByWrongCredentials().ExpirationTime,
+                    error = KeePassTokenFixtures.GetInvalidTokenCausedByWrongCredentials().Error,
+                    error_description = KeePassTokenFixtures.GetInvalidTokenCausedByWrongCredentials().ErrorDescription
+                })
+                .RegisterWith(options);
         }
 
-        public static HttpClient GetOnlyTimeoutTokenClient()
+        public static void RespondWithExpiredToken(HttpClientInterceptorOptions options)
         {
-            var mockMessageHandler = new Mock<HttpMessageHandler>();
-
-            mockMessageHandler.Protected()
-                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync((HttpRequestMessage request, CancellationToken token) =>
+            new HttpRequestInterceptionBuilder()
+                .Requests().ForHttps().ForPost().ForAnyHost()
+                .ForPath(KeePassSettingsFixtures.GetProperKeePassSettings().TokenEndpoint)
+                .Responds()
+                .WithStatus(HttpStatusCode.OK)
+                .WithSystemTextJsonContent(new
                 {
-                    var data = KeePassSettingsFixtures.GetProperKeePassSettings();
-
-                    if (request.RequestUri.AbsoluteUri.StartsWith(data.BaseAddress + data.TokenEndpoint))
-                    {
-                        var response = new HttpResponseMessage(HttpStatusCode.OK);
-                        response.RequestMessage = request;
-                        response.Content =
-                            new StringContent(JsonSerializer.Serialize(KeePassTokenFixtures.GetExpiredToken()));
-                        return response;
-                    }
-
-                    throw new InvalidOperationException("Error when generating response in http client from fixture.");
-                });
-
-            return new HttpClient(mockMessageHandler.Object)
-            {
-                BaseAddress = new Uri(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress)
-            };
+                    access_token = KeePassTokenFixtures.GetExpiredToken().AccessToken,
+                    token_type = KeePassTokenFixtures.GetExpiredToken().Type,
+                    expires_in = KeePassTokenFixtures.GetExpiredToken().ExpirationTime,
+                    error = KeePassTokenFixtures.GetExpiredToken().Error,
+                    error_description = KeePassTokenFixtures.GetExpiredToken().ErrorDescription
+                })
+                .RegisterWith(options);
         }
 
-        public static HttpClient GetGuidNotFoundClient()
+        public static void HandleGuidAsTokenUnauthorizedExpired(string guid, HttpClientInterceptorOptions options)
         {
-            var mockMessageHandler = new Mock<HttpMessageHandler>();
+            new HttpRequestInterceptionBuilder()
+                .Requests().ForHttps().ForGet().ForAnyHost()
+                .ForPath(KeePassSettingsFixtures.GetProperKeePassSettings().RestEndpoint + guid)
+                .Responds()
+                .WithStatus(HttpStatusCode.Unauthorized)
+                .WithJsonContent(ServiceResponseFixture.ValidDataResponse(guid))
+                .RegisterWith(options);
 
-            mockMessageHandler.Protected()
-                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync((HttpRequestMessage request, CancellationToken token) =>
-                {
-                    var data = KeePassSettingsFixtures.GetProperKeePassSettings();
-                    var guid = string.Empty;
-
-                    if (request.RequestUri.AbsoluteUri.StartsWith(data.BaseAddress + data.TokenEndpoint))
-                    {
-                        var response = new HttpResponseMessage(HttpStatusCode.OK);
-                        response.RequestMessage = request;
-                        response.Content =
-                            new StringContent(JsonSerializer.Serialize(KeePassTokenFixtures.GetProperToken()));
-                        return response;
-                    }
-                    else
-                    {
-                        var response = new HttpResponseMessage(HttpStatusCode.NotFound);
-                        response.RequestMessage = request;
-                        response.Content = new StringContent("");
-                        return response;
-                    }
-                });
-
-            return new HttpClient(mockMessageHandler.Object)
-            {
-                BaseAddress = new Uri(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress)
-            };
+            new HttpRequestInterceptionBuilder()
+                .Requests().ForHttps().ForGet().ForAnyHost()
+                .ForPath(KeePassSettingsFixtures.GetProperKeePassSettings().RestEndpoint + guid + "/password")
+                .Responds()
+                .WithStatus(HttpStatusCode.Unauthorized)
+                .RegisterWith(options);
         }
 
-        public static HttpClient GetValidTokenButUnauthorizedResponseClient()
+        public static void HandleGuidAsNotFound(string guid, HttpClientInterceptorOptions options)
         {
-            var mockMessageHandler = new Mock<HttpMessageHandler>();
+            new HttpRequestInterceptionBuilder()
+                .Requests().ForHttps().ForGet().ForAnyHost()
+                .ForPath(KeePassSettingsFixtures.GetProperKeePassSettings().RestEndpoint + guid)
+                .Responds()
+                .WithStatus(HttpStatusCode.NotFound)
+                .WithJsonContent(ServiceResponseFixture.ValidDataResponse(guid))
+                .RegisterWith(options);
 
-            mockMessageHandler.Protected()
-                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync((HttpRequestMessage request, CancellationToken token) =>
-                {
-                    var data = KeePassSettingsFixtures.GetProperKeePassSettings();
-                    var guid = string.Empty;
+            new HttpRequestInterceptionBuilder()
+                .Requests().ForHttps().ForGet().ForAnyHost()
+                .ForPath(KeePassSettingsFixtures.GetProperKeePassSettings().RestEndpoint + guid + "/password")
+                .Responds()
+                .WithStatus(HttpStatusCode.NotFound)
+                .RegisterWith(options);
+        }
 
-                    if ((request.RequestUri?.AbsoluteUri.StartsWith(data.BaseAddress + data.RestEndpoint) ?? false) &&
-                        (!request.RequestUri?.AbsoluteUri.EndsWith("password", StringComparison.InvariantCultureIgnoreCase) ?? false))
-                    {
-                        guid = request.RequestUri.AbsoluteUri.Replace(data.BaseAddress + data.RestEndpoint, "");
-                        var response = new HttpResponseMessage(HttpStatusCode.OK);
-                        response.RequestMessage = request;
-                        response.Content = new StringContent(ServiceResponseFixture.ValidDataResponse(guid));
-                        return response;
-                    }
-                    if ((request.RequestUri?.AbsoluteUri.StartsWith(data.BaseAddress + data.RestEndpoint) ?? false) &&
-                             (request.RequestUri?.AbsoluteUri.EndsWith("password", StringComparison.InvariantCultureIgnoreCase) ?? false))
-                    {
-                        var response = new HttpResponseMessage(HttpStatusCode.Unauthorized);
-                        response.RequestMessage = request;
-                        response.Content = new StringContent(ServiceResponseFixture.ValidPasswordResponse());
-                        return response;
-                    }
+        public static void HandleGuidAsFound(string guid, HttpClientInterceptorOptions options)
+        {
+            new HttpRequestInterceptionBuilder()
+                .Requests().ForHttps().ForGet().ForAnyHost()
+                .ForPath(KeePassSettingsFixtures.GetProperKeePassSettings().RestEndpoint + guid)
+                .Responds()
+                .WithStatus(HttpStatusCode.OK)
+                .WithJsonContent(ServiceResponseFixture.ValidDataResponse(guid))
+                .RegisterWith(options);
 
-                    if (request.RequestUri.AbsoluteUri.StartsWith(data.BaseAddress + data.TokenEndpoint))
-                    {
-                        var response = new HttpResponseMessage(HttpStatusCode.OK);
-                        response.RequestMessage = request;
-                        response.Content =
-                            new StringContent(JsonSerializer.Serialize(KeePassTokenFixtures.GetProperToken()));
-                        return response;
-                    }
-
-                    throw new InvalidOperationException("Error when generating response in http client from fixture.");
-                });
-
-            return new HttpClient(mockMessageHandler.Object)
-            {
-                BaseAddress = new Uri(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress)
-            };
+            new HttpRequestInterceptionBuilder()
+                .Requests().ForHttps().ForGet().ForAnyHost()
+                .ForPath(KeePassSettingsFixtures.GetProperKeePassSettings().RestEndpoint + guid + "/password")
+                .Responds()
+                .WithStatus(HttpStatusCode.OK)
+                .WithJsonContent(ServiceResponseFixture.ValidPasswordResponse())
+                .RegisterWith(options);
         }
     }
 }

@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Divergic.Logging.Xunit" Version="3.6.0" />
+    <PackageReference Include="JustEat.HttpClientInterception" Version="3.1.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.0-preview-20201123-03" />
     <PackageReference Include="Moq" Version="4.15.2" />
     <PackageReference Include="Moq.Contrib.ExpressionBuilders.Logging" Version="1.0.6" />

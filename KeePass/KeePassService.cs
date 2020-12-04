@@ -158,7 +158,6 @@ namespace KeePass
                 .ConfigureAwait(false);
 
             var freshToken = await DeserializeToken(response).ConfigureAwait(false);
-
             EnsureCorrectnessOf(response, freshToken);
 
             _logger?.LogInformation("{0}: Token received.", Name);

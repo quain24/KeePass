@@ -49,7 +49,7 @@ namespace KeePass
                         context.TryGetValue("Requesting", out var nameOfRequestedPart);
 
                         context.GetLogger()?.LogInformation("{0}: Service reports with \"{1}\" ({2}) code when asked about {3} part - access token is invalid / expired - trying to get new one...",
-                            serviceName, response.Result.StatusCode, (int)response.Result.StatusCode, nameOfRequestedPart?.ToString());
+                            serviceName, response.Result.StatusCode, (int)response.Result.StatusCode, nameOfRequestedPart as string);
 
                         if (context.TryGetValue("RenewToken", out var renewDelegate) && renewDelegate is Func<Task<Token>> renewToken)
                             await renewToken().ConfigureAwait(false);
