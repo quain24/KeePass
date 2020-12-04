@@ -53,6 +53,21 @@ namespace KeePass.Tests
         }
 
         [Fact]
+        public async Task Given_whitespace_guid_will_throw_ArgumentOutOfRangeException()
+        {
+            using var logger = Output.BuildLoggerFor<IKeePassService>();
+            var options = new HttpClientInterceptorOptions().ThrowsOnMissingRegistration();
+            HttpClientFixture.HandleTokenNormally(options);
+            HttpClientFixture.HandleGuidAsFound("       ", options);
+            var client = options.CreateHttpClient(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress);
+
+            Service = new KeePassService(client, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
+            var askGuid = string.Empty;
+
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Service.AskForSecret(askGuid));
+        }
+
+        [Fact]
         public async Task Given_null_guid_will_throw_ArgumentOutOfRangeException()
         {
             using var logger = Output.BuildLoggerFor<IKeePassService>();

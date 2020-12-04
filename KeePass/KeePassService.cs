@@ -53,10 +53,7 @@ namespace KeePass
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(guid))
-                    throw new ArgumentOutOfRangeException(nameof(guid), "Passed in guid cannot be null or empty!");
-
-                _logger?.LogInformation("{0}: Asking for secret of {1}", Name, guid);
+                CheckValidityOf(guid);
 
                 await GetToken().ConfigureAwait(false);
 
@@ -69,8 +66,7 @@ namespace KeePass
                 dataResponse.EnsureSuccessStatusCode();
                 passwordResponse.EnsureSuccessStatusCode();
 
-                _logger?.LogInformation("{0}: Secret received.", Name);
-                return await CreateSecret(dataResponse, passwordResponse).ConfigureAwait(false);
+                return await CreateSecretUsing(dataResponse, passwordResponse).ConfigureAwait(false);
             }
             catch (HttpRequestException ex)
             {
@@ -80,58 +76,11 @@ namespace KeePass
             }
         }
 
-        private async Task<HttpResponseMessage> AskForDataResponse(string guid)
+        private void CheckValidityOf(string guid)
         {
-            return await _retryIfUnauthorizedAsyncPolicy.ExecuteAsync(async _ =>
-            {
-                _logger?.LogDebug("{0}: Trying for data", Name);
-                var requestForData = new HttpRequestMessage(HttpMethod.Get, _setting.RestEndpoint + guid);
-                AddRequiredHeadersTo(requestForData, _token);
-
-                return await _client.SendAsync(requestForData).ConfigureAwait(false);
-            }, ContextForSecretsRequest("Data")).ConfigureAwait(false);
-        }
-
-        private async Task<HttpResponseMessage> AskForPasswordResponse(string guid)
-        {
-            return await _retryIfUnauthorizedAsyncPolicy.ExecuteAsync(async _ =>
-            {
-                _logger?.LogDebug("{0}: Trying for password", Name);
-                var requestForPassword = new HttpRequestMessage(HttpMethod.Get, _setting.RestEndpoint + guid + "/password");
-                AddRequiredHeadersTo(requestForPassword, _token);
-
-                return await _client.SendAsync(requestForPassword).ConfigureAwait(false);
-            }, ContextForSecretsRequest("Password")).ConfigureAwait(false);
-        }
-
-        private async Task<Secret> CreateSecret(HttpResponseMessage dataResponse, HttpResponseMessage passwordResponse)
-        {
-            try
-            {
-                var secret = await JsonSerializer
-                    .DeserializeAsync<Secret>(await dataResponse.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                    .ConfigureAwait(false);
-
-                var password = GetPasswordFrom(await passwordResponse.Content.ReadAsStringAsync().ConfigureAwait(false));
-
-                return secret with { Password = password };
-            }
-            catch (Exception ex) when (ex is JsonException || ex is NotSupportedException)
-            {
-                _logger?.LogError(ex, "{0}: Service was unable to deserialize response from api.");
-                throw;
-            }
-        }
-
-        private static string GetPasswordFrom(string passwordMessage)
-        {
-            if (string.IsNullOrEmpty(passwordMessage))
-                return string.Empty;
-
-            if (passwordMessage.StartsWith('"') && passwordMessage.EndsWith('"'))
-                return passwordMessage[1..^1]; // removal of " from beginning and end.
-
-            return passwordMessage;
+            if (string.IsNullOrWhiteSpace(guid))
+                throw new ArgumentOutOfRangeException(nameof(guid), "Passed in guid cannot be null or empty!");
+            _logger?.LogInformation("{0}: Asking for secret of {1}", Name, guid);
         }
 
         private async Task<Token> GetToken()
@@ -139,6 +88,7 @@ namespace KeePass
             try
             {
                 await _getTokenLock.WaitAsync().ConfigureAwait(false);
+
                 return _token.IsCorrect() && !_token.IsExpired()
                     ? _token
                     : await RenewToken().ConfigureAwait(false);
@@ -212,6 +162,30 @@ namespace KeePass
             }
         }
 
+        private async Task<HttpResponseMessage> AskForDataResponse(string guid)
+        {
+            return await _retryIfUnauthorizedAsyncPolicy.ExecuteAsync(async _ =>
+            {
+                _logger?.LogDebug("{0}: Trying for data", Name);
+                var requestForData = new HttpRequestMessage(HttpMethod.Get, _setting.RestEndpoint + guid);
+                AddRequiredHeadersTo(requestForData, _token);
+
+                return await _client.SendAsync(requestForData).ConfigureAwait(false);
+            }, ContextForSecretsRequest("Data")).ConfigureAwait(false);
+        }
+
+        private async Task<HttpResponseMessage> AskForPasswordResponse(string guid)
+        {
+            return await _retryIfUnauthorizedAsyncPolicy.ExecuteAsync(async _ =>
+            {
+                _logger?.LogDebug("{0}: Trying for password", Name);
+                var requestForPassword = new HttpRequestMessage(HttpMethod.Get, _setting.RestEndpoint + guid + "/password");
+                AddRequiredHeadersTo(requestForPassword, _token);
+
+                return await _client.SendAsync(requestForPassword).ConfigureAwait(false);
+            }, ContextForSecretsRequest("Password")).ConfigureAwait(false);
+        }
+
         private static void AddRequiredHeadersTo(HttpRequestMessage request, Token token)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue(token.Type, token);
@@ -224,6 +198,43 @@ namespace KeePass
             context.TryAdd("RenewToken", new Func<Task<Token>>(async () => await RenewToken().ConfigureAwait(false)));
             context.TryAdd("Requesting", nameOfRequestedPart);
             return context;
+        }
+
+        private async Task<Secret> CreateSecretUsing(HttpResponseMessage dataResponse, HttpResponseMessage passwordResponse)
+        {
+            var secret = await ExtractDataPartFrom(dataResponse).ConfigureAwait(false);
+            var password = await ExtractPasswordFrom(passwordResponse).ConfigureAwait(false);
+
+            _logger?.LogInformation("{0}: Secret received.", Name);
+            return secret with { Password = password };
+        }
+
+        private async Task<Secret> ExtractDataPartFrom(HttpResponseMessage dataResponse)
+        {
+            try
+            {
+                return await JsonSerializer
+                    .DeserializeAsync<Secret>(await dataResponse.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is JsonException || ex is NotSupportedException)
+            {
+                _logger?.LogError(ex, "{0}: Service was unable to deserialize response from api.");
+                throw;
+            }
+        }
+
+        private static async Task<string> ExtractPasswordFrom(HttpResponseMessage passwordResponse)
+        {
+            var passwordMessage = await passwordResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+            if (string.IsNullOrEmpty(passwordMessage))
+                return string.Empty;
+
+            if (passwordMessage.StartsWith('"') && passwordMessage.EndsWith('"'))
+                return passwordMessage[1..^1]; // removal of " from beginning and end.
+
+            return passwordMessage;
         }
     }
 }

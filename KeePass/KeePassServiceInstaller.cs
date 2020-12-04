@@ -31,7 +31,7 @@ namespace KeePass
             services.AddHttpClient<IKeePassService, KeePassService>((provider, client) =>
             {
                 client.BaseAddress = new Uri(settings.BaseAddress);
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(60);
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             })
             .AddPolicyHandler(KeePassPolicies.WaitAndRetryAsyncPolicy(Name, 3));

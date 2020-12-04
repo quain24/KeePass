@@ -42,7 +42,6 @@ namespace KeePass.Tests.Extensions
         private void IsExpired_returns_true_if_token_is_expire_or_has_less_than_60_seconds_left_for_token_lifetime()
         {
             Token expiredToken = new()
-
             {
                 AccessToken = "correct",
                 Error = null,
@@ -52,6 +51,21 @@ namespace KeePass.Tests.Extensions
             };
 
             Assert.True(expiredToken.IsExpired());
+        }
+
+        [Fact]
+        private void IsExpired_returns_false_if_token_has_more_than_60_seconds_left_for_token_lifetime()
+        {
+            Token expiredToken = new()
+            {
+                AccessToken = "correct",
+                Error = null,
+                ErrorDescription = null,
+                ExpirationTime = 120,
+                Type = "bearer"
+            };
+
+            Assert.False(expiredToken.IsExpired());
         }
 
         [Theory]
