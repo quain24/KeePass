@@ -14,6 +14,23 @@ namespace KeePass
         private readonly string _restEndpoint;
 
         /// <summary>
+        /// <inheritdoc cref="KeePassSettings"/>
+        /// </summary>
+        /// <param name="username">KeePass service username</param>
+        /// <param name="password">KeePass service password</param>
+        /// <param name="baseAddress">KeePass service base address. Must end with '/' character.</param>
+        /// <param name="tokenEndpoint">KeePass service endpoint for token</param>
+        /// <param name="restEndpoint">KeePass service rest endpoint for getting usernames / password pairs</param>
+        public KeePassSettings(string username, string password, string baseAddress, string tokenEndpoint, string restEndpoint)
+        {
+            Username = username;
+            Password = password;
+            BaseAddress = baseAddress;
+            TokenEndpoint = tokenEndpoint;
+            RestEndpoint = restEndpoint;
+        }
+
+        /// <summary>
         /// Base address for KeePass server, including port. Must end with "/"
         /// <para><example>example: https://server-keepass:900/ </example></para>
         /// </summary>
@@ -30,7 +47,7 @@ namespace KeePass
         public string RestEndpoint { get => _restEndpoint; init => _restEndpoint = ValidateProperty(value, nameof(RestEndpoint)); }
 
         /// <summary>
-        /// Username authorization for KeePass server
+        /// Username for KeePass server
         /// </summary>
         public string Username { get => _username; init => _username = ValidateProperty(value, nameof(Username)); }
 
@@ -42,8 +59,7 @@ namespace KeePass
         private static string ValidateProperty(string value, string name)
         {
             return string.IsNullOrEmpty(value)
-                ? throw new ArgumentException(nameof(Password),
-                    $"{name} property cannot be neither null nor empty. Value was not set or, if taken from appsettings.json - group or value might be missing")
+                ? throw new ArgumentException($"{name} property cannot be neither null nor empty. Value was not set or, if taken from appsettings.json - group or value might be missing", name)
                 : value;
         }
     }

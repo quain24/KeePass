@@ -4,26 +4,22 @@
     {
         public static KeePassSettings GetProperKeePassSettings()
         {
-            return new()
-            {
-                BaseAddress = "https://www.proper.base.address.com/",
-                Password = "valid_password",
-                Username = "valid_username",
-                RestEndpoint = "api/v4/rest/credential/",
-                TokenEndpoint = "OAuth2/Token"
-            };
+            return new(
+                username: "valid_username",
+                password: "valid_password",
+                baseAddress: "https://www.proper.base.address.com/",
+                tokenEndpoint: "OAuth2/Token",
+                restEndpoint: "api/v4/rest/credential/");
         }
 
         public static KeePassSettings GetInvalidPasswordSettings()
         {
-            return new()
-            {
-                BaseAddress = "https://www.proper.base.address.com/",
-                Password = "bad_password",
-                Username = "valid_username",
-                RestEndpoint = "api/v4/rest/credential/",
-                TokenEndpoint = "OAuth2/Token"
-            };
+            return new(
+                username: "valid_username",
+                password: "bad_password",
+                baseAddress: "https://www.proper.base.address.com/",
+                tokenEndpoint: "OAuth2/Token",
+                restEndpoint: "api/v4/rest/credential/");
         }
     }
 }

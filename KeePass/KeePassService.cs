@@ -136,7 +136,7 @@ namespace KeePass
             Token freshToken = null;
             try
             {
-                freshToken = JsonSerializer.Deserialize<Token>(await response?.Content?.ReadAsStringAsync() ?? string.Empty);
+                freshToken = JsonSerializer.Deserialize<Token>(await (response?.Content?.ReadAsStringAsync()).ConfigureAwait(false) ?? string.Empty);
             }
             catch (Exception ex) when (ex is JsonException || ex is NotSupportedException)
             {
