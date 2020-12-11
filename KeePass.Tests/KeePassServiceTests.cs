@@ -1,5 +1,6 @@
 ﻿using JustEat.HttpClientInterception;
 using KeePass.Tests.Fixtures;
+using Moq;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -28,7 +29,10 @@ namespace KeePass.Tests
             HttpClientFixture.HandleTokenNormally(options);
             HttpClientFixture.HandleGuidAsFound(askGuid, options);
             var client = options.CreateHttpClient(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress);
-            Service = new KeePassService(client, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
+            var httpFactoryMock = new Mock<IHttpClientFactory>();
+            httpFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
+
+            Service = new KeePassService(httpFactoryMock.Object, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
 
             var response = await Service.AskForSecret(askGuid);
 
@@ -45,8 +49,10 @@ namespace KeePass.Tests
             HttpClientFixture.HandleTokenNormally(options);
             HttpClientFixture.HandleGuidAsFound(string.Empty, options);
             var client = options.CreateHttpClient(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress);
+            var httpFactoryMock = new Mock<IHttpClientFactory>();
+            httpFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
 
-            Service = new KeePassService(client, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
+            Service = new KeePassService(httpFactoryMock.Object, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
             var askGuid = string.Empty;
 
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Service.AskForSecret(askGuid));
@@ -60,8 +66,10 @@ namespace KeePass.Tests
             HttpClientFixture.HandleTokenNormally(options);
             HttpClientFixture.HandleGuidAsFound("       ", options);
             var client = options.CreateHttpClient(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress);
+            var httpFactoryMock = new Mock<IHttpClientFactory>();
+            httpFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
 
-            Service = new KeePassService(client, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
+            Service = new KeePassService(httpFactoryMock.Object, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
             var askGuid = string.Empty;
 
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Service.AskForSecret(askGuid));
@@ -75,8 +83,10 @@ namespace KeePass.Tests
             HttpClientFixture.HandleTokenNormally(options);
             HttpClientFixture.HandleGuidAsFound(string.Empty, options);
             var client = options.CreateHttpClient(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress);
+            var httpFactoryMock = new Mock<IHttpClientFactory>();
+            httpFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
 
-            Service = new KeePassService(client, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
+            Service = new KeePassService(httpFactoryMock.Object, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
             string askGuid = null;
 
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Service.AskForSecret(askGuid));
@@ -89,8 +99,10 @@ namespace KeePass.Tests
             var options = new HttpClientInterceptorOptions().ThrowsOnMissingRegistration();
             HttpClientFixture.HandleTokenNormally(options);
             var client = options.CreateHttpClient(KeePassSettingsFixtures.GetInvalidPasswordSettings().BaseAddress);
+            var httpFactoryMock = new Mock<IHttpClientFactory>();
+            httpFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
 
-            Service = new KeePassService(client, KeePassSettingsFixtures.GetInvalidPasswordSettings(), logger);
+            Service = new KeePassService(httpFactoryMock.Object, KeePassSettingsFixtures.GetInvalidPasswordSettings(), logger);
             var askGuid = "not_important";
 
             await Assert.ThrowsAsync<HttpRequestException>(() => Service.AskForSecret(askGuid));
@@ -105,8 +117,10 @@ namespace KeePass.Tests
             HttpClientFixture.HandleTokenNormally(options);
             HttpClientFixture.HandleGuidAsTokenUnauthorizedExpired(askGuid, options);
             var client = options.CreateHttpClient(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress);
+            var httpFactoryMock = new Mock<IHttpClientFactory>();
+            httpFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
 
-            Service = new KeePassService(client, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
+            Service = new KeePassService(httpFactoryMock.Object, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
 
             await Assert.ThrowsAsync<HttpRequestException>(() => Service.AskForSecret(askGuid));
         }
@@ -120,8 +134,10 @@ namespace KeePass.Tests
             HttpClientFixture.HandleTokenNormally(options);
             HttpClientFixture.HandleGuidAsNotFound(askGuid, options);
             var client = options.CreateHttpClient(KeePassSettingsFixtures.GetProperKeePassSettings().BaseAddress);
+            var httpFactoryMock = new Mock<IHttpClientFactory>();
+            httpFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
 
-            Service = new KeePassService(client, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
+            Service = new KeePassService(httpFactoryMock.Object, KeePassSettingsFixtures.GetProperKeePassSettings(), logger);
 
             await Assert.ThrowsAsync<HttpRequestException>(() => Service.AskForSecret(askGuid));
         }

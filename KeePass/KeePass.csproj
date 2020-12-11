@@ -13,15 +13,16 @@
 
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>1.0.8</Version>
-    <AssemblyVersion>1.0.8.0</AssemblyVersion>
-    <FileVersion>1.0.8.0</FileVersion>
+    <Version>1.0.9</Version>
+    <AssemblyVersion>1.0.9.0</AssemblyVersion>
+    <FileVersion>1.0.9.0</FileVersion>
     <PackageProjectUrl>http://srv-project01.hsf.local/henryk/keepass</PackageProjectUrl>
   </PropertyGroup>
 
 	<PropertyGroup>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<PackageReleaseNotes>KeePass service is now Scoped - this should limit calling for token response per on user.</PackageReleaseNotes>
 	</PropertyGroup>
 
   <ItemGroup>

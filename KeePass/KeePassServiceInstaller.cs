@@ -25,7 +25,7 @@ namespace KeePass
             settings ??= TryToReadSettingsFrom(configuration);
 
             services.AddSingleton(settings);
-            services.AddHttpClient<IKeePassService, KeePassService>((provider, client) =>
+            services.AddHttpClient(Name, (provider, client) =>
             {
                 client.BaseAddress = new Uri(settings.BaseAddress);
                 client.Timeout = TimeSpan.FromSeconds(60);
@@ -33,6 +33,7 @@ namespace KeePass
             })
             .AddPolicyHandler(KeePassPolicies.WaitAndRetryAsyncPolicy(Name, 3));
 
+            services.AddScoped<IKeePassService, KeePassService>();
             return services;
         }
 

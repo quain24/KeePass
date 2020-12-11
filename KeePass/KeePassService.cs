@@ -20,7 +20,7 @@ namespace KeePass
     {
         private const string Name = "KeePass";
 
-        private readonly HttpClient _client;
+        private readonly IHttpClientFactory _factory;
         private readonly KeePassSettings _setting;
         private readonly ILogger<IKeePassService> _logger;
 
@@ -34,11 +34,11 @@ namespace KeePass
         /// <param name="client">This <see cref="HttpClient"/> instance will be used for all communication in this service</param>
         /// <param name="settings"><see cref="KeePassSettings"/> containing all necessary options for this service</param>
         /// <param name="logger"><see cref="ILogger{KeePassService}"/> - responsible for all logging inside this service, optional</param>
-        public KeePassService(HttpClient client, KeePassSettings settings, ILogger<IKeePassService> logger)
+        public KeePassService(IHttpClientFactory factory, KeePassSettings settings, ILogger<IKeePassService> logger)
         {
             _logger = logger;
             _setting = settings ?? throw new ArgumentNullException(nameof(settings), "Settings object must not be null.");
-            _client = client;
+            _factory = factory;
         }
 
         /// <summary>
@@ -103,7 +103,8 @@ namespace KeePass
         {
             _logger?.LogInformation("{0}: Asking remote service for token...", Name);
 
-            var response = await _client
+            var response = await _factory
+                .CreateClient(Name)
                 .SendAsync(RequestForToken())
                 .ConfigureAwait(false);
 
@@ -170,7 +171,7 @@ namespace KeePass
                 var requestForData = new HttpRequestMessage(HttpMethod.Get, _setting.RestEndpoint + guid);
                 AddRequiredHeadersTo(requestForData, _token);
 
-                return await _client.SendAsync(requestForData).ConfigureAwait(false);
+                return await _factory.CreateClient(Name).SendAsync(requestForData).ConfigureAwait(false);
             }, ContextForSecretsRequest("Data")).ConfigureAwait(false);
         }
 
@@ -182,7 +183,7 @@ namespace KeePass
                 var requestForPassword = new HttpRequestMessage(HttpMethod.Get, _setting.RestEndpoint + guid + "/password");
                 AddRequiredHeadersTo(requestForPassword, _token);
 
-                return await _client.SendAsync(requestForPassword).ConfigureAwait(false);
+                return await _factory.CreateClient(Name).SendAsync(requestForPassword).ConfigureAwait(false);
             }, ContextForSecretsRequest("Password")).ConfigureAwait(false);
         }
 
