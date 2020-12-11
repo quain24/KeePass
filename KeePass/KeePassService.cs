@@ -31,7 +31,7 @@ namespace KeePass
         /// <summary>
         /// <inheritdoc cref="KeePassService"/>
         /// </summary>
-        /// <param name="client">This <see cref="HttpClient"/> instance will be used for all communication in this service</param>
+        /// <param name="factory">This <see cref="IHttpClientFactory"/> will be used for all communication in this service</param>
         /// <param name="settings"><see cref="KeePassSettings"/> containing all necessary options for this service</param>
         /// <param name="logger"><see cref="ILogger{KeePassService}"/> - responsible for all logging inside this service, optional</param>
         public KeePassService(IHttpClientFactory factory, KeePassSettings settings, ILogger<IKeePassService> logger)
