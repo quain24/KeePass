@@ -91,7 +91,7 @@ namespace KeePass
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogWarning(ex, "{0}: Request for secret was cancelled using cancellation token");
+                _logger.LogWarning(ex, "{0}: Request for secret was cancelled using cancellation token", Name);
                 throw;
             }
         }
@@ -245,7 +245,7 @@ namespace KeePass
             }
             catch (Exception ex) when (ex is JsonException || ex is NotSupportedException)
             {
-                _logger?.LogError(ex, "{0}: Service was unable to deserialize response from api.");
+                _logger?.LogError(ex, "{0}: Service was unable to deserialize response from api.", Name);
                 throw;
             }
         }
