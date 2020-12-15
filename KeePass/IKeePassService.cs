@@ -2,6 +2,7 @@
 using System;
 using System.Net.Http;
 using System.Security.Authentication;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace KeePass
@@ -17,7 +18,18 @@ namespace KeePass
         /// <exception cref="HttpRequestException">Service was unavailable, provided KeePass service credentials were incorrect or received responses were incorrect</exception>
         /// <exception cref="Exception">Service was unable to deserialize response from API into a <see cref="Secret"/> or <see cref="Token"/> object</exception>
         /// <exception cref="AuthenticationException">Service received and deserialized <see cref="Token"/> properly, but it failed internal validation</exception>
-        /// <param name="guid"></param>
+        /// <param name="guid">KeePass guid</param>
+        /// <param name="token">Used for cancellation of secret request</param>
+        /// <returns>Valid <see cref="Secret"/> if data was received successfully or empty object</returns>
+        Task<Secret> AskForSecret(string guid, CancellationToken token);
+
+        /// <summary>
+        /// <inheritdoc cref="AskForSecret(string,System.Threading.CancellationToken)"/>
+        /// </summary>
+        /// <exception cref="HttpRequestException">Service was unavailable, provided KeePass service credentials were incorrect or received responses were incorrect</exception>
+        /// <exception cref="Exception">Service was unable to deserialize response from API into a <see cref="Secret"/> or <see cref="Token"/> object</exception>
+        /// <exception cref="AuthenticationException">Service received and deserialized <see cref="Token"/> properly, but it failed internal validation</exception>
+        /// <param name="guid">KeePass guid</param>
         /// <returns>Valid <see cref="Secret"/> if data was received successfully or empty object</returns>
         Task<Secret> AskForSecret(string guid);
     }

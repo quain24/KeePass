@@ -47,21 +47,35 @@ namespace KeePass
         /// <exception cref="HttpRequestException">Service was unavailable, provided KeePass service credentials were incorrect or received responses were incorrect</exception>
         /// <exception cref="Exception">Service was unable to deserialize response from API into a <see cref="Secret"/> or <see cref="Token"/> object</exception>
         /// <exception cref="AuthenticationException">Service received and deserialized <see cref="Token"/> properly, but it failed internal validation</exception>
-        /// <param name="guid"></param>
+        /// <exception cref="OperationCanceledException">The request for secret was cancelled (possibly timeout)</exception>
+        /// <param name="guid">KeePass guid</param>
         /// <returns>Valid <see cref="Secret"/> if data was received successfully or empty object</returns>
-        public async Task<Secret> AskForSecret(string guid)
+        public Task<Secret> AskForSecret(string guid) => AskForSecret(guid, CancellationToken.None);
+        
+        /// <summary>
+        /// <inheritdoc cref="IKeePassService"/>
+        /// </summary>
+        /// <exception cref="HttpRequestException">Service was unavailable, provided KeePass service credentials were incorrect or received responses were incorrect</exception>
+        /// <exception cref="Exception">Service was unable to deserialize response from API into a <see cref="Secret"/> or <see cref="Token"/> object</exception>
+        /// <exception cref="AuthenticationException">Service received and deserialized <see cref="Token"/> properly, but it failed internal validation</exception>
+        /// <exception cref="OperationCanceledException">The request for secret was cancelled using provided <see cref="CancellationToken"/></exception>
+        /// <param name="guid">KeePass guid</param>
+        /// <param name="ct">Used for cancellation of secret request</param>
+        /// <returns>Valid <see cref="Secret"/> if data was received successfully or empty object</returns>
+        public async Task<Secret> AskForSecret(string guid, CancellationToken ct)
         {
             try
             {
                 CheckValidityOf(guid);
 
-                await GetToken().ConfigureAwait(false);
+                await GetToken(ct).ConfigureAwait(false);
 
-                var dataTask = AskForDataResponse(guid);
-                var passwordTask = AskForPasswordResponse(guid);
+                var dataTask = AskForDataResponse(guid, ct);
+                var passwordTask = AskForPasswordResponse(guid, ct);
 
                 var dataResponse = await dataTask.ConfigureAwait(false);
                 var passwordResponse = await passwordTask.ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
 
                 dataResponse.EnsureSuccessStatusCode();
                 passwordResponse.EnsureSuccessStatusCode();
@@ -70,8 +84,14 @@ namespace KeePass
             }
             catch (HttpRequestException ex)
             {
-                _logger?.LogError(ex, "{0}: Was unable to get secret for \"{1}\" guid - response code - {2}", Name, guid,
+                _logger?.LogError(ex, "{0}: Was unable to get secret for \"{1}\" guid - response code - {2}", Name,
+                    guid,
                     ex.StatusCode);
+                throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogWarning(ex, "{0}: Request for secret was cancelled using cancellation token");
                 throw;
             }
         }
@@ -83,32 +103,31 @@ namespace KeePass
             _logger?.LogInformation("{0}: Asking for secret of {1}", Name, guid);
         }
 
-        private async Task<Token> GetToken()
+        private async Task<Token> GetToken(CancellationToken ct)
         {
             try
             {
-                await _getTokenLock.WaitAsync().ConfigureAwait(false);
+                await _getTokenLock.WaitAsync(ct).ConfigureAwait(false);
 
                 return _token.IsCorrect() && !_token.IsExpired()
                     ? _token
-                    : await RenewToken().ConfigureAwait(false);
+                    : await RenewToken(ct).ConfigureAwait(false);
             }
             finally
             {
                 _getTokenLock.Release();
             }
         }
-
-        private async Task<Token> RenewToken()
+        
+        private async Task<Token> RenewToken(CancellationToken ct)
         {
             _logger?.LogInformation("{0}: Asking remote service for token...", Name);
-
             var response = await _factory
                 .CreateClient(Name)
-                .SendAsync(RequestForToken())
+                .SendAsync(RequestForToken(), ct)
                 .ConfigureAwait(false);
 
-            var freshToken = await DeserializeToken(response).ConfigureAwait(false);
+            var freshToken = await DeserializeToken(response, ct).ConfigureAwait(false);
             EnsureCorrectnessOf(response, freshToken);
 
             _logger?.LogInformation("{0}: Token received.", Name);
@@ -132,12 +151,16 @@ namespace KeePass
             return request;
         }
 
-        private async Task<Token> DeserializeToken(HttpResponseMessage response)
+        private async Task<Token> DeserializeToken(HttpResponseMessage response, CancellationToken ct)
         {
             Token freshToken = null;
+            
+            
+            ct.ThrowIfCancellationRequested();
             try
             {
-                freshToken = JsonSerializer.Deserialize<Token>(await (response?.Content?.ReadAsStringAsync()).ConfigureAwait(false) ?? string.Empty);
+                var content = await (response?.Content.ReadAsStringAsync(ct) ?? Task.FromResult(string.Empty)).ConfigureAwait(false);
+                freshToken = JsonSerializer.Deserialize<Token>(content);
             }
             catch (Exception ex) when (ex is JsonException || ex is NotSupportedException)
             {
@@ -163,19 +186,20 @@ namespace KeePass
             }
         }
 
-        private async Task<HttpResponseMessage> AskForDataResponse(string guid)
+        private async Task<HttpResponseMessage> AskForDataResponse(string guid, CancellationToken ct)
         {
-            return await _retryIfUnauthorizedAsyncPolicy.ExecuteAsync(async _ =>
-            {
-                _logger?.LogDebug("{0}: Trying for data", Name);
-                var requestForData = new HttpRequestMessage(HttpMethod.Get, _setting.RestEndpoint + guid);
-                AddRequiredHeadersTo(requestForData, _token);
+            return await _retryIfUnauthorizedAsyncPolicy.ExecuteAsync(async (_) =>
+           {
+               _logger?.LogDebug("{0}: Trying for data", Name);
+               var requestForData = new HttpRequestMessage(HttpMethod.Get, _setting.RestEndpoint + guid);
+               AddRequiredHeadersTo(requestForData, _token);
 
-                return await _factory.CreateClient(Name).SendAsync(requestForData).ConfigureAwait(false);
-            }, ContextForSecretsRequest("Data")).ConfigureAwait(false);
+               var response = await _factory.CreateClient(Name).SendAsync(requestForData, ct).ConfigureAwait(false);
+               return response;
+           }, ContextForSecretsRequest("Data", ct)).ConfigureAwait(false);
         }
 
-        private async Task<HttpResponseMessage> AskForPasswordResponse(string guid)
+        private async Task<HttpResponseMessage> AskForPasswordResponse(string guid, CancellationToken ct)
         {
             return await _retryIfUnauthorizedAsyncPolicy.ExecuteAsync(async _ =>
             {
@@ -183,8 +207,9 @@ namespace KeePass
                 var requestForPassword = new HttpRequestMessage(HttpMethod.Get, _setting.RestEndpoint + guid + "/password");
                 AddRequiredHeadersTo(requestForPassword, _token);
 
-                return await _factory.CreateClient(Name).SendAsync(requestForPassword).ConfigureAwait(false);
-            }, ContextForSecretsRequest("Password")).ConfigureAwait(false);
+                var response = await _factory.CreateClient(Name).SendAsync(requestForPassword, ct).ConfigureAwait(false);
+                return response;
+            }, ContextForSecretsRequest("Password", ct)).ConfigureAwait(false);
         }
 
         private static void AddRequiredHeadersTo(HttpRequestMessage request, Token token)
@@ -193,10 +218,10 @@ namespace KeePass
             request.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
         }
 
-        private Context ContextForSecretsRequest(string nameOfRequestedPart)
+        private Context ContextForSecretsRequest(string nameOfRequestedPart, CancellationToken ct)
         {
             var context = new Context().WithLogger(_logger);
-            context.TryAdd("RenewToken", new Func<Task<Token>>(async () => await RenewToken().ConfigureAwait(false)));
+            context.TryAdd("RenewToken", new Func<Task<Token>>(async () => await RenewToken(ct).ConfigureAwait(false)));
             context.TryAdd("Requesting", nameOfRequestedPart);
             return context;
         }
