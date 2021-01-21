@@ -1,15 +1,11 @@
-
-KeePass password service.
-[[_TOC_]]
-
 ## Installation
-To setup this service as a nuget package you need to download a '[nuget.config](nuget.config)' file from this repo and put it in your solution main folder.
+To setup this service as a nuget package you need to download a '[nuget.config](http://srv-project01.hsf.local/henryk/NugetSourceConfiguration/-/blob/master/nuget.config)' file from [NuGet source configuration](http://srv-project01.hsf.local/henryk/NugetSourceConfiguration) repo and put it in your solution main folder.
 This file contains all data necessary for visual studio / nuget / dotnet commands to download nuget version of this project.
 
 Next step is to donload nuget package like any other in visual studio / command line tool, using provided repository data.
 In Visual Studio: 
 - Right-click on chosen project 'dependencies' and select 'manage nuget packages'.
-- In top-right corner select 'HSF_KeePass_Nuget_source from 'Package source:' dropdown.
+- In top-right corner select 'HSF_Nuget_source from 'Package source:' dropdown.
 - In the left window a 'KeePassPleasantPasswordServerClient' should show up - if not, try to hit refresh.
 - Select it and hit 'Install'
 
@@ -38,6 +34,10 @@ This project contains simplified DI installation method called `SetupKeePassServ
 Optionally, if you wish to replace / override settings from json file mentioned earlier, you can give it additional optional parameter `KeePassSettings`.
 Settings from this object will supersede those from json.
 This is the whole setup.
+
+## No Dependency injection container setup
+'New up' `KeePassService` and in place of `IHttpClientFactory` insert `NoDiHttpClientFactory` object - this will provide `KeePassService`
+with proper `HttpClient` (singleton).
 
 ## Usage
 Inject `IKeePassService` into any object you want.
