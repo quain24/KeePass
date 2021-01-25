@@ -13,17 +13,16 @@
 
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>1.0.12</Version>
-    <AssemblyVersion>1.0.12.0</AssemblyVersion>
-    <FileVersion>1.0.12.0</FileVersion>
+    <Version>1.0.13</Version>
+    <AssemblyVersion>1.0.13.0</AssemblyVersion>
+    <FileVersion>1.0.13.0</FileVersion>
     <PackageProjectUrl>http://srv-project01.hsf.local/henryk/keepass</PackageProjectUrl>
   </PropertyGroup>
 
 	<PropertyGroup>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
-		<PackageReleaseNotes>Added additional class so new up of KeePass wont be problematic.
-NoDiHttpClientFactory can be given as constructor param when no DI IHttpClientFactory implementation is available. Be advised, that this solution should be used only with short lived programs.</PackageReleaseNotes>
+		<PackageReleaseNotes>Default token and rest service enpoints now provided when instatiating KeePassSettings</PackageReleaseNotes>
 	</PropertyGroup>
 
   <ItemGroup>

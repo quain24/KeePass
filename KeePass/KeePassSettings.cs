@@ -7,6 +7,8 @@ namespace KeePass
     /// </summary>
     public class KeePassSettings
     {
+        private const string DefaultTokenEndpoint = "OAuth2/Token";
+        private const string DefaultRestEndpoint = "api/v4/rest/credential/";
         private readonly string _username;
         private readonly string _password;
         private readonly string _baseAddress;
@@ -21,7 +23,7 @@ namespace KeePass
         /// <param name="baseAddress">KeePass service base address. Must end with '/' character.</param>
         /// <param name="tokenEndpoint">KeePass service endpoint for token</param>
         /// <param name="restEndpoint">KeePass service rest endpoint for getting usernames / password pairs</param>
-        public KeePassSettings(string username, string password, string baseAddress, string tokenEndpoint, string restEndpoint)
+        public KeePassSettings(string username, string password, string baseAddress, string tokenEndpoint = DefaultTokenEndpoint, string restEndpoint = DefaultRestEndpoint)
         {
             Username = username;
             Password = password;
