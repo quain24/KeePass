@@ -2,20 +2,6 @@
 KeePass password service.
 [[_TOC_]]
 
-## Installation
-To setup this service as a nuget package you need to download a '[nuget.config](nuget.config)' file from this repo and put it in your solution main folder.
-This file contains all data necessary for visual studio / nuget / dotnet commands to download nuget version of this project.
-
-Next step is to donload nuget package like any other in visual studio / command line tool, using provided repository data.
-In Visual Studio: 
-- Right-click on chosen project 'dependencies' and select 'manage nuget packages'.
-- In top-right corner select 'HSF_KeePass_Nuget_source from 'Package source:' dropdown.
-- In the left window a 'KeePassPleasantPasswordServerClient' should show up - if not, try to hit refresh.
-- Select it and hit 'Install'
-
-## Updates
-This projects nuget package can be upgraded like any other nuget, from nuget manager.
-
 ## Prerequisites
 
 A loaded json file injected into 'IConfiguraion' containing following data:
