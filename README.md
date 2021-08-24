@@ -1,3 +1,11 @@
+## What is it?
+It is a simple package enabling You to grab basic information from a KeePass server that You or Your organisation is hosting.
+Data that You can get is a login and a password.
+
+Ideal solution for having a centralised password storage for a single person or whole company.
+Store Your passwords on a server and let Your services / apps ask for them when needed.
+
+
 ## Prerequisites
 
 A loaded json file injected into 'IConfiguraion' containing following data:
