@@ -8,8 +8,8 @@ Store Your passwords on a server and let Your services / apps ask for them when 
 
 ## Prerequisites
 
-A loaded json file injected into 'IConfiguraion' containing following data:
->>>
+A loaded json file injected into `IConfiguraion` containing following data:
+```json
 "KeePass": {
     "BaseAddress": "correct address to KeePass instannce ended with '/'",
     "TokenEndpoint": "OAuth2/Token",
@@ -17,7 +17,7 @@ A loaded json file injected into 'IConfiguraion' containing following data:
     "Username": "KeePass username",
     "Password": "KeePass password"
   }
->>>
+```
 
 If there is no loaded json file - those settings can be injected when setting up a Dependency Injection.
 
