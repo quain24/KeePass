@@ -1,16 +1,10 @@
-## Installation
-To setup this service as a nuget package you need to download a '[nuget.config](http://srv-project01.hsf.local/henryk/NugetSourceConfiguration/-/blob/master/nuget.config)' file from [NuGet source configuration](http://srv-project01.hsf.local/henryk/NugetSourceConfiguration) repo and put it in your solution main folder.
-This file contains all data necessary for visual studio / nuget / dotnet commands to download nuget version of this project.
+## What is it?
+It is a simple package enabling You to grab basic information from a KeePass server that You or Your organisation is hosting.
+Data that You can get is a login and a password.
 
-Next step is to donload nuget package like any other in visual studio / command line tool, using provided repository data.
-In Visual Studio: 
-- Right-click on chosen project 'dependencies' and select 'manage nuget packages'.
-- In top-right corner select 'HSF_Nuget_source from 'Package source:' dropdown.
-- In the left window a 'KeePassPleasantPasswordServerClient' should show up - if not, try to hit refresh.
-- Select it and hit 'Install'
+Ideal solution for having a centralised password storage for a single person or whole company.
+Store Your passwords on a server and let Your services / apps ask for them when needed.
 
-## Updates
-This projects nuget package can be upgraded like any other nuget, from nuget manager.
 
 ## Prerequisites
 
