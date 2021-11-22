@@ -8,21 +8,26 @@
     <Description>Library used to retrieve password / username pairs (secret) from password server</Description>
     <PackageTags>KeePass, password, username, service, pleasant password server, hsf</PackageTags>
     <Product>KeePass Pleasant Password Server client</Product>
-    <Copyright>Do not redistribute without consent</Copyright>
+    <Copyright>Free for non-commercial use under GPL 3 or later.</Copyright>
   </PropertyGroup>
 
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>1.0.13</Version>
-    <AssemblyVersion>1.0.13.0</AssemblyVersion>
-    <FileVersion>1.0.13.0</FileVersion>
-    <PackageProjectUrl>http://srv-project01.hsf.local/henryk/keepass</PackageProjectUrl>
+    <Version>1.0.13.1</Version>
+    <AssemblyVersion>1.0.13.1</AssemblyVersion>
+    <FileVersion>1.0.13.1</FileVersion>
+    <PackageProjectUrl>https://github.com/quain24/KeePass</PackageProjectUrl>
   </PropertyGroup>
 
 	<PropertyGroup>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
-		<PackageReleaseNotes>Default token and rest service enpoints now provided when instatiating KeePassSettings</PackageReleaseNotes>
+		<PackageReleaseNotes>Fixed invalid repo address in nuget documentation.</PackageReleaseNotes>
+		<RepositoryUrl>https://github.com/quain24/KeePass</RepositoryUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+		<PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
+		<NeutralLanguage>en</NeutralLanguage>
 	</PropertyGroup>
 
   <ItemGroup>
@@ -38,6 +43,28 @@
       <_Parameter1>KeePass.Tests</_Parameter1>
       <!-- We use the value of AssemblyName to declare the value of the attribute -->
     </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>
