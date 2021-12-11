@@ -5,6 +5,9 @@ Data that You can get is a login and a password.
 Ideal solution for having a centralised password storage for a single person or whole company.
 Store Your passwords on a server and let Your services / apps ask for them when needed.
 
+## Supported frameworks
+This library requires .NET 6.\
+From version 1.1.0.0 onwards .NET 5 version of this software became legacy. Code for it is located [here](https://github.com/quain24/KeePass/tree/net5).
 
 ## Prerequisites
 
@@ -22,7 +25,7 @@ A loaded json file injected into `IConfiguraion` containing following data:
 If there is no loaded json file - those settings can be injected when setting up a Dependency Injection.
 
 ## Dependency injection setup
-Example uses Microsoft NET 5.0 DI container.
+Example uses Microsoft NET 6.0 DI container.
 
 This project contains simplified DI installation method called `SetupKeePassServices()`, that takes `IConfiguration` as a parameter.
 Optionally, if you wish to replace / override settings from json file mentioned earlier, you can give it additional optional parameter `KeePassSettings`.
