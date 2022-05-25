@@ -25,3 +25,17 @@ steps:
     command: 'test'
     projects: '**/KeePass.Tests/*.csproj'
     testRunTitle: 'Standard test'
+
+- task: NuGetCommand@2
+  inputs:
+    command: 'pack'
+    packagesToPack: '**/KeePass/*.csproj'
+    versioningScheme: 'byBuildNumber'
+    includeSymbols: true
+- task: NuGetCommand@2
+  inputs:
+    command: 'push'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: 'internal'
+    publishVstsFeed: 'b5c6bc0c-cc4b-4e58-8bd5-daab70b4a2c2'
+    allowPackageConflicts: true
